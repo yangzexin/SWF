@@ -6,13 +6,20 @@
 //  Copyright (c) 2015 yangzexin. All rights reserved.
 //
 
+import Foundation
+#if os(iOS)
 import UIKit
+#endif
 
-public func deposit<T: Depositable>(to target: AnyObject, with depositable: T) -> T {
+public func deposit(to target: AnyObject, with depositable: Depositable) -> Depositable {
     return deposit(to:target, with:depositable, id: nil)
 }
 
-public func deposit<T: Depositable>(to target: AnyObject, with depositable: T, var #id: String?) -> T {
+internal func _deposit<T: Depositable> (to target: AnyObject, with depositable: T, var #id: String?) -> T {
+    return deposit(to: target, with: depositable, id: id) as! T
+}
+
+public func deposit(to target: AnyObject, with depositable: Depositable, var #id: String?) -> Depositable {
     objc_sync_enter(target)
     
     if id == nil {
@@ -27,7 +34,7 @@ public func deposit<T: Depositable>(to target: AnyObject, with depositable: T, v
     return depositable
 }
 
-public func getDeposited(from target: AnyObject, #id: String) -> Depositable? {
+public func deposited(from target: AnyObject, #id: String) -> Depositable? {
     objc_sync_enter(target)
     
     var depositable = keyIdValueDepositable(target).objectForKey(id) as? Depositable
@@ -40,7 +47,13 @@ public func getDeposited(from target: AnyObject, #id: String) -> Depositable? {
 public func removeDeposited(from target: AnyObject, #id: String) {
     objc_sync_enter(target)
     
-    keyIdValueDepositable(target).removeObjectForKey(id)
+    var KIVD = keyIdValueDepositable(target)
+    
+    var object: AnyObject? = KIVD.objectForKey(id)
+    if let depositable = object as? Depositable {
+        depositable.depositableWillRemove()
+        KIVD.removeObjectForKey(id)
+    }
     
     objc_sync_exit(target)
 }
@@ -63,21 +76,21 @@ private func keyIdValueDepositable(target: AnyObject) -> NSMutableDictionary {
                 }
             })
             
-            addDeinitObserver(target: target, id: "_depositable_support_removeNotificationCenterObserver", {
+            addDiedObserver(target: target, id: "_depositable_support_removeNotificationCenterObserver", {
                 [weak keyIdValueDepositable] () -> () in
                 NSNotificationCenter.defaultCenter().removeObserver(observerContext)
                 if let wkeyIdValueDepositable = keyIdValueDepositable {
                     notifyAllDepositables(wkeyIdValueDepositable)
                 } else {
-                    println("unexpected runtime error: keyIdValueDepositable nil")
+                    println("unexpected runtime error: nil keyIdValueDepositable")
                 }
             })
         #else
-            addDeinitObserver(target: target, id: "_depositable_support_removeNotificationCenterObserver", { () -> () in
+            addDiedObserver(target: target, id: "_depositable_support_removeNotificationCenterObserver", { () -> () in
                 if let wkeyIdValueDepositable = keyIdValueDepositable {
                     notifyAllDepositables(wkeyIdValueDepositable)
                 } else {
-                    println("unexpected runtime error: keyIdValueDepositable nil")
+                    println("unexpected runtime error: nil keyIdValueDepositable")
                 }
             })
         #endif
@@ -100,8 +113,8 @@ private func handleMemoryWarning(target:AnyObject, keyIdValueDepositable: NSMuta
     
     var removingKeys = NSMutableArray()
     
-    for (key, value) in keyIdValueDepositable {
-        var depositable = value as! Depositable
+    for key in keyIdValueDepositable.allKeys {
+        var depositable = keyIdValueDepositable.objectForKey(key) as! Depositable
         if depositable.shouldRemoveDepositable() {
             depositable.depositableWillRemove()
             removingKeys.addObject(key)

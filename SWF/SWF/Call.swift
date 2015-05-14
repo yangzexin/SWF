@@ -14,12 +14,12 @@ public let CallNilCallErrorDomain   = "Nil call"
 public let CallNilCallErrorCode     = -200001
 
 public protocol Call : Depositable {
-    func start(#callback: (result: Result) -> ())
+    func start(#callback: (out: Out) -> ())
     func isExecuting() -> Bool
     func cancel()
 }
 
-public struct Result {
+public struct Out {
     public var value: Any?
     public var error: NSError?
     
@@ -41,11 +41,11 @@ public struct Result {
 }
 
 public class BaseCall : Call {
-    private var callback: ((result: Result) -> ())?
+    private var callback: ((out: Out) -> ())?
     private var cancelled: Bool = false
     private var executing: Bool = false
     
-    public func start(#callback: (result: Result) -> ()) {
+    public func start(#callback: (out: Out) -> ()) {
         objc_sync_enter(self)
         
         self.callback = callback
@@ -57,7 +57,7 @@ public class BaseCall : Call {
     }
     
     public func isExecuting() -> Bool {
-        return !self.executing
+        return self.executing
     }
     
     public func cancel() {
@@ -83,13 +83,13 @@ public class BaseCall : Call {
         
     }
     
-    public func finish(#result: Result) {
+    public func finish(#out: Out) {
         objc_sync_enter(self)
         
         if !self.cancelled {
-            self.didFinish(result)
+            self.didFinish(out)
             if let callback = self.callback {
-                callback(result: result)
+                callback(out: out)
                 dispatch_async(dispatch_get_main_queue(), { () -> Void in
                     self.callback = nil
                 })
@@ -106,20 +106,20 @@ public class BaseCall : Call {
     public func didCancel() {
     }
     
-    public func didFinish(result: Result) {
+    public func didFinish(out: Out) {
     }
 }
 
 public class ComposableCall : BaseCall {
-    private var result: Result
+    private var out: Out
     private var synchronous = false
     
-    public init(result: Result) {
-        self.result = result
+    public init(out: Out) {
+        self.out = out
     }
     
-    convenience init(result: Result, synchronous: Bool) {
-        self.init(result: result)
+    convenience init(out: Out, synchronous: Bool) {
+        self.init(out: out)
         self.setSynchronous(synchronous)
     }
     
@@ -131,10 +131,10 @@ public class ComposableCall : BaseCall {
     
     override public func didStart() {
         if self.synchronous {
-            self.finish(result: self.result)
+            self.finish(out: self.out)
         } else {
             dispatch_async(dispatch_get_main_queue(), { () -> Void in
-                self.finish(result: self.result)
+                self.finish(out: self.out)
             })
         }
     }
@@ -153,8 +153,8 @@ public class WrappedCall : BaseCall {
         super.didStart()
         
         if let call = self.call {
-            call.start(callback: { [weak self] (result) -> () in
-                self?.finish(result: result)
+            call.start(callback: { [weak self] (out) -> () in
+                self?.finish(out: out)
             })
         }
     }
@@ -193,8 +193,8 @@ public class WrappedCall : BaseCall {
         }
     }
     
-    public func wrapResult(resultWrapper: (result: Result) -> Result) -> WrappedCall {
-        var call = ResultWrapCall(self, resultWrapper: resultWrapper)
+    public func wrapOut(outWrapper: (out: Out) -> Out) -> WrappedCall {
+        var call = OutWrapCall(self, outWrapper: outWrapper)
         
         return call
     }
@@ -205,7 +205,7 @@ public class WrappedCall : BaseCall {
         return call
     }
     
-    public func intercept(#callback: (result: Result) -> ()) -> WrappedCall {
+    public func intercept(#callback: (out: Out) -> ()) -> WrappedCall {
         var call = MulticastCall(self, multicastCallback: callback)
         
         return call
@@ -229,31 +229,31 @@ public class WrappedCall : BaseCall {
         return call
     }
     
-    public func append(continuing: (result: Result) -> Call) -> WrappedCall {
+    public func append(continuing: (out: Out) -> Call) -> WrappedCall {
         var call = SequenceCall(call: self, continuing: continuing)
         
         return call
     }
     
-    public func keep(by: AnyObject, id: String? = nil) -> WrappedCall {
-        return deposit(to: by, with: self, id: id)
+    public func deposit(#by: AnyObject, id: String? = nil) -> WrappedCall {
+        return _deposit(to: by, with: self, id: id)
     }
 }
 
-private class ResultWrapCall : WrappedCall {
-    private var resultWrapper: (result: Result) -> Result
+private class OutWrapCall : WrappedCall {
+    private var outWrapper: (out: Out) -> Out
     
-    init(_ call: Call, resultWrapper: (result: Result) -> Result) {
-        self.resultWrapper = resultWrapper
+    init(_ call: Call, outWrapper: (out: Out) -> Out) {
+        self.outWrapper = outWrapper
         super.init(call)
     }
     
     override private func didStart() {
         if let call = self.call {
-            call.start(callback: { [weak self] (result) -> () in
+            call.start(callback: { [weak self] (out) -> () in
                 if let wself = self {
-                    let wrappedResult = wself.resultWrapper(result: result)
-                    wself.finish(result: wrappedResult)
+                    let wrappedOut = wself.outWrapper(out: out)
+                    wself.finish(out: wrappedOut)
                 }
             })
         }
@@ -261,18 +261,18 @@ private class ResultWrapCall : WrappedCall {
 }
 
 private class MulticastCall : WrappedCall {
-    private var multicastCallback: ((result: Result) -> ())
+    private var multicastCallback: ((out: Out) -> ())
     
-    init(_ call: Call, multicastCallback:((result: Result) -> ())) {
+    init(_ call: Call, multicastCallback:((out: Out) -> ())) {
         self.multicastCallback = multicastCallback
         super.init(call)
     }
     
     override private func didStart() {
         if let call = self.call {
-            call.start(callback: { [weak self] (result) -> () in
-                self?.multicastCallback(result: result)
-                self?.finish(result: result)
+            call.start(callback: { [weak self] (out) -> () in
+                self?.multicastCallback(out: out)
+                self?.finish(out: out)
             })
         }
     }
@@ -281,9 +281,9 @@ private class MulticastCall : WrappedCall {
 private class MainThreadCallbackCall : WrappedCall {
     override private func didStart() {
         if let call = self.call {
-            call.start(callback: { [weak self] (result) -> () in
+            call.start(callback: { [weak self] (out) -> () in
                 dispatch_async(dispatch_get_main_queue(), { () -> Void in
-                    self?.finish(result: result)
+                    self?.finish(out: out)
                 })
             })
         }
@@ -304,9 +304,9 @@ private class TimeoutCall : WrappedCall {
         
         self.finished = false
         
-        call.start { [weak self] (result) -> () in
+        call.start { [weak self] (out) -> () in
             self?.finished = true
-            self?.finish(result: result)
+            self?.finish(out: out)
         }
         
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, Int64(self.timeoutInterval * Double(NSEC_PER_SEC))), dispatch_get_main_queue()) {
@@ -314,7 +314,7 @@ private class TimeoutCall : WrappedCall {
             if let wself = self {
                 if !wself.finished {
                     wself.call?.cancel()
-                    wself.finish(result: Result(error: wself.error()))
+                    wself.finish(out: Out(error: wself.error()))
                 }
             }
         }
@@ -326,36 +326,36 @@ private class TimeoutCall : WrappedCall {
 }
 
 private class SyncedCall : WrappedCall {
-    var result: Result?
+    var out: Out?
     
     override private func didStart() {
         assert(!NSThread.isMainThread(), "SyncedCall shouldn't be running in mainthread")
         var sema = dispatch_semaphore_create(0)
         
         var call = self.call!
-        call.start { [weak self] (result) -> () in
-            self?.result = result
+        call.start { [weak self] (out) -> () in
+            self?.out = out
             dispatch_semaphore_signal(sema)
         }
         
         dispatch_semaphore_wait(sema, DISPATCH_TIME_FOREVER)
         
-        self.finish(result: self.result!)
+        self.finish(out: self.out!)
     }
 }
 
 private class SequenceCall : WrappedCall {
-    private var continuing: ((result: Result) -> Call)
+    private var continuing: ((out: Out) -> Call)
     private var continuingCall: Call?
     
-    init(call: Call, continuing: ((result: Result) -> Call)) {
+    init(call: Call, continuing: ((out: Out) -> Call)) {
         self.continuing = continuing
         super.init(call)
     }
     
     override private func didStart() {
-        self.call!.start { [weak self] (result) -> () in
-            self?.originalCallDidFinish(result)
+        self.call!.start { [weak self] (out) -> () in
+            self?.originalCallDidFinish(out)
         }
     }
     
@@ -364,11 +364,11 @@ private class SequenceCall : WrappedCall {
         self.continuingCall?.cancel()
     }
     
-    private func originalCallDidFinish(result: Result) {
+    private func originalCallDidFinish(out: Out) {
         if !self.cancelled {
-            self.continuingCall = self.continuing(result: result)
-            self.continuingCall?.start(callback: { [weak self] (result) -> () in
-                self?.finish(result: result)
+            self.continuingCall = self.continuing(out: out)
+            self.continuingCall?.start(callback: { [weak self] (out) -> () in
+                self?.finish(out: out)
             })
         }
     }
@@ -377,7 +377,7 @@ private class SequenceCall : WrappedCall {
 private class OnceCall : WrappedCall {
     private var called = false
     
-    override private func start(#callback: (result: Result) -> ()) {
+    override private func start(#callback: (out: Out) -> ()) {
         objc_sync_enter(self)
         
         if !self.called {
@@ -392,7 +392,7 @@ private class OnceCall : WrappedCall {
 
 private class GroupCall : WrappedCall {
     private var keyIdValueCall: Dictionary<String, Call>
-    private var keyIdValueResult: Dictionary<String, Result>?
+    private var keyIdValueOut: Dictionary<String, Out>?
     private var processingIdentifiers: Array<String>?
     
     init(keyIdValueCall: Dictionary<String, Call>) {
@@ -402,19 +402,19 @@ private class GroupCall : WrappedCall {
     
     override func didStart() {
         super.didStart()
-        self.keyIdValueResult = Dictionary<String, Result>()
+        self.keyIdValueOut = Dictionary<String, Out>()
         self.processingIdentifiers = Array<String>(self.keyIdValueCall.keys)
         
         let allIdentifiers = self.processingIdentifiers!
         for identifier in allIdentifiers {
             var singleCall = self.keyIdValueCall[identifier]!
-            singleCall.start(callback: { [weak self] (result) -> () in
+            singleCall.start(callback: { [weak self] (out) -> () in
                 if let wself = self {
                     if !wself.cancelled {
-                        wself.keyIdValueResult!.updateValue(result, forKey: identifier)
+                        wself.keyIdValueOut!.updateValue(out, forKey: identifier)
                         wself.processingIdentifiers!.removeAtIndex((find(wself.processingIdentifiers!, identifier))!)
                         if wself.processingIdentifiers!.count == 0 {
-                            wself.finish(result: Result(value: wself.keyIdValueResult!))
+                            wself.finish(out: Out(value: wself.keyIdValueOut!))
                         }
                     }
                 }

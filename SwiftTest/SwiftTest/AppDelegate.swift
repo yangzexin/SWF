@@ -73,7 +73,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 //            tcc.testValue = 20
 //        }
         
-        var c1 = ComposableCall(result: Result(value: "test"))
+        var c1 = ComposableCall(out: Out(value: "test"))
         c1.setSynchronous(true)
         
         var gc = WrappedCall(c1).append { (result) -> Call in
@@ -82,14 +82,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                 str += result.value as! String
             }
             
-            return ComposableCall(result: Result(value: str))
+            return ComposableCall(out: Out(value: str))
         }.append { (result) -> Call in
             var str = "prefix:"
             if result.hasValue() {
                 str += result.value as! String
             }
             
-            return ComposableCall(result: Result(value: str))
+            return ComposableCall(out: Out(value: str))
         }.once().timeout(1).sync().mainthreadCallback().intercept { (result) -> () in
             if result.hasValue() {
                 println(result.value!)
@@ -97,8 +97,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                 println(result.error!)
             }
         }
-        gc = WrappedCall(gc).wrapResult { (result) -> Result in
-            return Result(value: "wappedResult")
+        gc = WrappedCall(gc).wrapOut { (result) -> Out in
+            return Out(value: "wappedResult")
         }.intercept { (result) -> () in
             if result.hasValue() {
                 println(result.value!)
@@ -107,26 +107,32 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             }
         }
         
-        var str = ComposableCall(result: Result(value: "str"))
+        addDiedObserver(target: gc) { () -> () in
+            println("gc died")
+        }
         
-        deposit(to: self, with: str, id:"teststr")
+        var str = ComposableCall(out: Out(value: "str"))
         
-        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), { () -> Void in
-            deposit(to: str, with: gc, id: "test").start { (result) -> () in
-                if result.hasValue() {
-                    println(result.value!)
-                } else {
-                    println(result.error!)
+        deposit(to:self, with: str, id: "teststr")
+        
+        after(5, { () -> () in
+            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), { () -> Void in
+                gc.deposit(by: self).start { (result) -> () in
+                    if result.hasValue() {
+                        println(result.value!)
+                    } else {
+                        println(result.error!)
+                    }
                 }
-            }
-            
-            println("sync")
+                
+                println("sync")
+            })
         })
         
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, Int64(5 * Double(NSEC_PER_SEC))), dispatch_get_main_queue()) { () -> Void in
+        var af = after(10, { () -> () in
             removeDeposited(from: self, id: "teststr")
             removeDeposited(from: self, id: "test")
-        }
+        })
         
         return true
     }

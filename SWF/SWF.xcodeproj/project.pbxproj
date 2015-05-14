@@ -12,8 +12,9 @@
 		3E0BE96A1B0093BE001FCF81 /* SWFTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E0BE9691B0093BE001FCF81 /* SWFTests.swift */; };
 		3E0BE9761B0093CA001FCF81 /* Call.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E0BE9731B0093CA001FCF81 /* Call.swift */; };
 		3E0BE9771B0093CA001FCF81 /* AnyObject+AssociatedObject.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E0BE9741B0093CA001FCF81 /* AnyObject+AssociatedObject.swift */; };
-		3E0BE9781B0093CA001FCF81 /* AnyObject+DeinitObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E0BE9751B0093CA001FCF81 /* AnyObject+DeinitObserver.swift */; };
+		3E0BE9781B0093CA001FCF81 /* AnyObject+DiedObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E0BE9751B0093CA001FCF81 /* AnyObject+DiedObserver.swift */; };
 		3E0BE9851B00A731001FCF81 /* Depositable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E0BE9841B00A731001FCF81 /* Depositable.swift */; };
+		3E35BB8A1B043A440067D7EA /* ObjcExt.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E35BB891B043A440067D7EA /* ObjcExt.swift */; };
 		3EE48BBC1B0335270038D19D /* AnyObject+Depositable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EE48BBB1B0335270038D19D /* AnyObject+Depositable.swift */; };
 /* End PBXBuildFile section */
 
@@ -36,8 +37,9 @@
 		3E0BE9691B0093BE001FCF81 /* SWFTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SWFTests.swift; sourceTree = "<group>"; };
 		3E0BE9731B0093CA001FCF81 /* Call.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Call.swift; sourceTree = "<group>"; };
 		3E0BE9741B0093CA001FCF81 /* AnyObject+AssociatedObject.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "AnyObject+AssociatedObject.swift"; sourceTree = "<group>"; };
-		3E0BE9751B0093CA001FCF81 /* AnyObject+DeinitObserver.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "AnyObject+DeinitObserver.swift"; sourceTree = "<group>"; };
+		3E0BE9751B0093CA001FCF81 /* AnyObject+DiedObserver.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "AnyObject+DiedObserver.swift"; sourceTree = "<group>"; };
 		3E0BE9841B00A731001FCF81 /* Depositable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Depositable.swift; sourceTree = "<group>"; };
+		3E35BB891B043A440067D7EA /* ObjcExt.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ObjcExt.swift; sourceTree = "<group>"; };
 		3EE48BBB1B0335270038D19D /* AnyObject+Depositable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "AnyObject+Depositable.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -81,11 +83,12 @@
 		3E0BE9591B0093BD001FCF81 /* SWF */ = {
 			isa = PBXGroup;
 			children = (
+				3E35BB891B043A440067D7EA /* ObjcExt.swift */,
 				3E0BE9731B0093CA001FCF81 /* Call.swift */,
 				3E0BE9841B00A731001FCF81 /* Depositable.swift */,
 				3EE48BBB1B0335270038D19D /* AnyObject+Depositable.swift */,
 				3E0BE9741B0093CA001FCF81 /* AnyObject+AssociatedObject.swift */,
-				3E0BE9751B0093CA001FCF81 /* AnyObject+DeinitObserver.swift */,
+				3E0BE9751B0093CA001FCF81 /* AnyObject+DiedObserver.swift */,
 				3E0BE95C1B0093BD001FCF81 /* SWF.h */,
 				3E0BE95A1B0093BD001FCF81 /* Supporting Files */,
 			);
@@ -225,7 +228,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				3E0BE9851B00A731001FCF81 /* Depositable.swift in Sources */,
-				3E0BE9781B0093CA001FCF81 /* AnyObject+DeinitObserver.swift in Sources */,
+				3E35BB8A1B043A440067D7EA /* ObjcExt.swift in Sources */,
+				3E0BE9781B0093CA001FCF81 /* AnyObject+DiedObserver.swift in Sources */,
 				3EE48BBC1B0335270038D19D /* AnyObject+Depositable.swift in Sources */,
 				3E0BE9771B0093CA001FCF81 /* AnyObject+AssociatedObject.swift in Sources */,
 				3E0BE9761B0093CA001FCF81 /* Call.swift in Sources */,

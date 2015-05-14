@@ -6,7 +6,7 @@
 //  Copyright (c) 2015 yangzexin. All rights reserved.
 //
 
-import UIKit
+import Foundation
 
 public protocol Depositable : AnyObject {
     func shouldRemoveDepositable() -> Bool
