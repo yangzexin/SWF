@@ -234,6 +234,10 @@ public class WrappedCall : BaseCall {
         
         return call
     }
+    
+    public func keep(by: AnyObject, id: String? = nil) -> WrappedCall {
+        return deposit(to: by, with: self, id: id)
+    }
 }
 
 private class ResultWrapCall : WrappedCall {
