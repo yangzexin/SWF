@@ -401,7 +401,6 @@ private class GroupCall : WrappedCall {
     }
     
     override func didStart() {
-        super.didStart()
         self.keyIdValueOut = Dictionary<String, Out>()
         self.processingIdentifiers = Array<String>(self.keyIdValueCall.keys)
         
